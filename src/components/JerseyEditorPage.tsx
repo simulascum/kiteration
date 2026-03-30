@@ -7,7 +7,7 @@ import { Jersey, DEFAULT_ZONE_CONFIGS, type JerseyAPI, type Zone, type ZoneConfi
 const MODEL_PATH = `${import.meta.env.BASE_URL}football_shirt.glb`
 
 const ALL_ZONES = Object.keys(DEFAULT_ZONE_CONFIGS) as Zone[]
-const PATTERN_OPTIONS: PatternType[] = ['none', 'chevrons', 'stripes', 'dots']
+const PATTERN_OPTIONS: PatternType[] = ['none', 'chevrons', 'stripes', 'dots', 'checkerboard', 'diagonal_stripes', 'houndstooth', 'gradient', 'stars', 'crosses', 'zigzag', 'argyle', 'camo']
 
 function formatZoneLabel(zone: string): string {
   return zone.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase())
@@ -47,6 +47,14 @@ export function JerseyEditorPage() {
 
   const handlePatternColorChange = useCallback((zone: Zone, value: string) => {
     setConfigs((prev) => ({ ...prev, [zone]: { ...prev[zone], patternColor: value } }))
+  }, [])
+
+  const handlePatternScaleChange = useCallback((zone: Zone, value: number) => {
+    setConfigs((prev) => ({ ...prev, [zone]: { ...prev[zone], patternScale: value } }))
+  }, [])
+
+  const handlePatternOpacityChange = useCallback((zone: Zone, value: number) => {
+    setConfigs((prev) => ({ ...prev, [zone]: { ...prev[zone], patternOpacity: value } }))
   }, [])
 
   return (
@@ -143,6 +151,34 @@ export function JerseyEditorPage() {
                 />
               )}
             </div>
+            {configs[zone].pattern && configs[zone].pattern !== 'none' && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 4, paddingLeft: 4 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <label style={{ color: '#888', fontSize: 11, width: 44 }}>Scale</label>
+                  <input
+                    type="range"
+                    min={0.2}
+                    max={3}
+                    step={0.1}
+                    value={configs[zone].patternScale ?? 1}
+                    onChange={(e) => handlePatternScaleChange(zone, Number(e.target.value))}
+                    style={{ flex: 1 }}
+                  />
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <label style={{ color: '#888', fontSize: 11, width: 44 }}>Opacity</label>
+                  <input
+                    type="range"
+                    min={0.05}
+                    max={1}
+                    step={0.05}
+                    value={configs[zone].patternOpacity ?? 1}
+                    onChange={(e) => handlePatternOpacityChange(zone, Number(e.target.value))}
+                    style={{ flex: 1 }}
+                  />
+                </div>
+              </div>
+            )}
           </div>
         ))}
         <div style={{ marginTop: 12 }}>

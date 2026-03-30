@@ -1,6 +1,8 @@
 import type { UVIslandData } from './uvIslands.ts'
 import { DEBUG_ISLAND_COLORS } from '../components/Jersey'
 import type { ZoneConfig, OverlayOptions } from '../components/Jersey'
+import { drawPattern, type PatternType } from './patterns'
+export type { PatternType } from './patterns'
 
 const TEX_SIZE = 2048
 
@@ -73,7 +75,7 @@ export class TexturePainter {
     // Per-zone pattern overlays
     for (const [zone, cfg] of Object.entries(zoneConfigs)) {
       if (cfg.pattern && cfg.pattern !== 'none') {
-        this.drawPattern(data, islandToZone, zone, cfg.pattern, cfg.patternColor ?? '#ffffff')
+        this.drawPattern(data, islandToZone, zone, cfg.pattern, cfg.patternColor ?? '#ffffff', cfg.patternScale ?? 1, cfg.patternOpacity ?? 1)
       }
     }
 
@@ -92,13 +94,16 @@ export class TexturePainter {
     data: UVIslandData,
     islandToZone: Record<number, string>,
     zone: string,
-    type: 'chevrons' | 'stripes' | 'dots',
+    type: Exclude<PatternType, 'none'>,
     color: string,
+    scale: number,
+    opacity: number,
   ): void {
     const { ctx, size } = this
     const { triToIsland, triCount, uvs, index } = data
 
     ctx.save()
+    ctx.globalAlpha = opacity
     ctx.beginPath()
     for (let t = 0; t < triCount; t++) {
       if (islandToZone[triToIsland[t]] !== zone) continue
@@ -111,38 +116,7 @@ export class TexturePainter {
     }
     ctx.clip()
 
-    if (type === 'chevrons') {
-      ctx.strokeStyle = color
-      ctx.lineWidth = 6
-      ctx.lineJoin = 'miter'
-      const spacing = 60, amp = 30
-      for (let y = 0; y < size; y += spacing) {
-        ctx.beginPath()
-        for (let x = 0; x < size; x += amp * 2) {
-          ctx.moveTo(x, y)
-          ctx.lineTo(x + amp, y - amp)
-          ctx.lineTo(x + amp * 2, y)
-        }
-        ctx.stroke()
-      }
-    } else if (type === 'stripes') {
-      ctx.fillStyle = color
-      const stripeW = 20, gap = 40
-      for (let x = 0; x < size; x += stripeW + gap) {
-        ctx.fillRect(x, 0, stripeW, size)
-      }
-    } else if (type === 'dots') {
-      ctx.fillStyle = color
-      const dotR = 8, spacing = 50
-      for (let y = 0; y < size; y += spacing) {
-        const offset = (Math.floor(y / spacing) % 2) * (spacing / 2)
-        for (let x = offset; x < size; x += spacing) {
-          ctx.beginPath()
-          ctx.arc(x, y, dotR, 0, Math.PI * 2)
-          ctx.fill()
-        }
-      }
-    }
+    drawPattern(ctx, size, type, color, scale)
     ctx.restore()
   }
 
