@@ -193,8 +193,8 @@ export function JerseyViewer() {
     number: jerseyNumber.trim() ? {
       text: jerseyNumber,
       color: numberColor,
-      x: 24,
-      y: 35,
+      zone: 'back',
+      scale: 80,
     } : undefined,
   }), [jerseyNumber, numberColor, decalImg, decalColor, decalScale])
 
