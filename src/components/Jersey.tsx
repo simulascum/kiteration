@@ -7,12 +7,15 @@ import { TexturePainter } from '../lib/texturePainter'
 export type { UVIslandData } from '../lib/uvIslands.ts'
 export type { NumberOptions, DecalOptions } from '../lib/texturePainter'
 
-export type PatternType = 'none' | 'chevrons' | 'stripes' | 'dots'
+import type { PatternType } from '../lib/patterns'
+export type { PatternType } from '../lib/patterns'
 
 export interface ZoneConfig {
   color: string
   pattern?: PatternType
   patternColor?: string
+  patternScale?: number
+  patternOpacity?: number
 }
 
 const ZONE_DEFS = [
