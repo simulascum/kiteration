@@ -1,4 +1,4 @@
-# jersey-chore
+# kiteration
 a minimal soccer jersey creator tool
 
 ## credits
