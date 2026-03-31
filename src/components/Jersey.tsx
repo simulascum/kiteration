@@ -5,7 +5,7 @@ import { detectUVIslands, type UVIslandData } from '../lib/uvIslands.ts'
 import { TexturePainter } from '../lib/texturePainter'
 
 export type { UVIslandData } from '../lib/uvIslands.ts'
-export type { NumberOptions, DecalOptions } from '../lib/texturePainter'
+export type { NumberOptions, DecalOptions, ChestIconOptions } from '../lib/texturePainter'
 
 import type { PatternType } from '../lib/patterns'
 export type { PatternType } from '../lib/patterns'
@@ -56,6 +56,7 @@ export interface JerseyAPI {
 export interface OverlayOptions {
   number?: import('../lib/texturePainter').NumberOptions
   decal?: import('../lib/texturePainter').DecalOptions
+  chestIcon?: import('../lib/texturePainter').ChestIconOptions
 }
 
 interface JerseyProps {

@@ -21,6 +21,14 @@ export interface DecalOptions {
   frontIslandId: number
 }
 
+export interface ChestIconOptions {
+  image: HTMLImageElement
+  scale: number       // percentage of zone height
+  xOffset: number     // -1 to 1, horizontal offset from center
+  yOffset: number     // -1 to 1, vertical offset from center (positive = up in texture space)
+  color?: string      // optional tint color (replaces all opaque pixels)
+}
+
 /**
  * Manages an offscreen canvas texture for painting zone colors,
  * patterns, decals, and numbers onto a UV-mapped mesh.
@@ -82,6 +90,11 @@ export class TexturePainter {
     // Decal
     if (overlays?.decal) {
       this.drawDecal(data, overlays.decal)
+    }
+
+    // Chest icon
+    if (overlays?.chestIcon) {
+      this.drawChestIcon(data, islandToZone, overlays.chestIcon)
     }
 
     // Number
@@ -157,6 +170,66 @@ export class TexturePainter {
     ctx.translate(centerU, centerV + vertOffset)
     ctx.scale(1, -1)
     ctx.drawImage(tmp, -drawW / 2, -drawH / 2, drawW, drawH)
+    ctx.restore()
+  }
+
+  private drawChestIcon(
+    data: UVIslandData,
+    islandToZone: Record<number, string>,
+    icon: ChestIconOptions,
+  ): void {
+    const { ctx, size } = this
+    const { triToIsland, triCount, uvs, index } = data
+
+    // Find the island ID for the 'front' zone
+    let targetIsland = -1
+    for (const [id, zone] of Object.entries(islandToZone)) {
+      if (zone === 'front') { targetIsland = Number(id); break }
+    }
+    if (targetIsland === -1) return
+
+    // Compute island bounding box
+    let minU = Infinity, maxU = -Infinity, minV = Infinity, maxV = -Infinity
+    for (let t = 0; t < triCount; t++) {
+      if (triToIsland[t] !== targetIsland) continue
+      for (let j = 0; j < 3; j++) {
+        const vi = index ? index.getX(t * 3 + j) : t * 3 + j
+        const u = uvs.getX(vi), v = uvs.getY(vi)
+        minU = Math.min(minU, u); maxU = Math.max(maxU, u)
+        minV = Math.min(minV, v); maxV = Math.max(maxV, v)
+      }
+    }
+
+    const zoneW = (maxU - minU) * size
+    const zoneH = (maxV - minV) * size
+    const centerU = ((minU + maxU) / 2) * size
+    const centerV = ((minV + maxV) / 2) * size
+
+    // Position: offset from center of zone
+    const drawX = centerU + icon.xOffset * (zoneW / 2)
+    const drawY = centerV + icon.yOffset * (zoneH / 2)
+
+    const drawH = zoneH * (icon.scale / 100)
+    const drawW = drawH * (icon.image.width / icon.image.height)
+
+    // Optionally tint the image
+    let src: CanvasImageSource = icon.image
+    if (icon.color) {
+      const tmp = document.createElement('canvas')
+      tmp.width = icon.image.width
+      tmp.height = icon.image.height
+      const tc = tmp.getContext('2d')!
+      tc.drawImage(icon.image, 0, 0)
+      tc.globalCompositeOperation = 'source-in'
+      tc.fillStyle = icon.color
+      tc.fillRect(0, 0, tmp.width, tmp.height)
+      src = tmp
+    }
+
+    ctx.save()
+    ctx.translate(drawX, drawY)
+    ctx.scale(1, -1)
+    ctx.drawImage(src, -drawW / 2, -drawH / 2, drawW, drawH)
     ctx.restore()
   }
 

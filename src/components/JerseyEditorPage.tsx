@@ -3,6 +3,8 @@ import { Canvas } from '@react-three/fiber'
 import { OrbitControls } from '@react-three/drei'
 import * as THREE from 'three'
 import { Jersey, DEFAULT_ZONE_CONFIGS, type JerseyAPI, type Zone, type ZoneConfig, type PatternType, type OverlayOptions } from './Jersey'
+import { SpaceBackground } from './SpaceBackground'
+import { EffectComposer, Bloom } from '@react-three/postprocessing'
 
 const MODEL_PATH = `${import.meta.env.BASE_URL}football_shirt.glb`
 
@@ -22,12 +24,27 @@ export function JerseyEditorPage() {
   const [numberColor, setNumberColor] = useState('#ffffff')
   const [numberScale, setNumberScale] = useState(80)
 
+  const [chestIcon, setChestIcon] = useState<{ image: HTMLImageElement; name: string } | null>(null)
+  const [chestIconScale, setChestIconScale] = useState(25)
+  const [chestIconX, setChestIconX] = useState(0.3)
+  const [chestIconY, setChestIconY] = useState(0.3)
+  const [chestIconColor, setChestIconColor] = useState<string | null>(null)
+  const chestIconInputRef = useRef<HTMLInputElement>(null)
+  const [bloomEnabled, setBloomEnabled] = useState(true)
+
   const zoneConfigs = useMemo(() => ({ ...configs }), [configs])
 
   const overlays = useMemo<OverlayOptions | undefined>(() => {
-    if (!numberText) return undefined
-    return { number: { text: numberText, color: numberColor, zone: 'back', scale: numberScale } }
-  }, [numberText, numberColor, numberScale])
+    const o: OverlayOptions = {}
+    if (numberText) {
+      o.number = { text: numberText, color: numberColor, zone: 'back', scale: numberScale }
+    }
+    if (chestIcon) {
+      o.chestIcon = { image: chestIcon.image, scale: chestIconScale, xOffset: chestIconX, yOffset: chestIconY, color: chestIconColor ?? undefined }
+    }
+    if (!o.number && !o.chestIcon) return undefined
+    return o
+  }, [numberText, numberColor, numberScale, chestIcon, chestIconScale, chestIconX, chestIconY, chestIconColor])
 
   const handleJerseyReady = useCallback((api: JerseyAPI) => {
     jerseyApiRef.current = api
@@ -55,6 +72,22 @@ export function JerseyEditorPage() {
 
   const handlePatternOpacityChange = useCallback((zone: Zone, value: number) => {
     setConfigs((prev) => ({ ...prev, [zone]: { ...prev[zone], patternOpacity: value } }))
+  }, [])
+
+  const handleChestIconUpload = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    if (!file.type.match(/^image\/(png|svg\+xml)$/)) return
+    const url = URL.createObjectURL(file)
+    const img = new Image()
+    img.onload = () => {
+      setChestIcon((prev) => {
+        if (prev) URL.revokeObjectURL(url) // revoke if we replaced (img already loaded)
+        return { image: img, name: file.name }
+      })
+    }
+    img.src = url
+    e.target.value = ''
   }, [])
 
   return (
@@ -112,6 +145,98 @@ export function JerseyEditorPage() {
             style={{ flex: 1 }}
           />
         </div>
+        <h2 style={{ color: '#fff', margin: '12px 0 8px', fontSize: 18 }}>Chest Icon</h2>
+        <input
+          ref={chestIconInputRef}
+          type="file"
+          accept=".png,.svg,image/png,image/svg+xml"
+          onChange={handleChestIconUpload}
+          style={{ display: 'none' }}
+        />
+        <button
+          onClick={() => chestIconInputRef.current?.click()}
+          style={{
+            width: '100%',
+            padding: '8px 12px',
+            border: '1px solid #333',
+            borderRadius: 6,
+            background: '#1a1a1a',
+            color: '#ccc',
+            fontSize: 13,
+            cursor: 'pointer',
+          }}
+        >
+          {chestIcon ? chestIcon.name : 'Upload PNG / SVG'}
+        </button>
+        {chestIcon && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+              <label style={{ color: '#888', fontSize: 11, width: 44 }}>Color</label>
+              <input
+                type="checkbox"
+                checked={chestIconColor !== null}
+                onChange={(e) => setChestIconColor(e.target.checked ? '#ffffff' : null)}
+              />
+              {chestIconColor !== null && (
+                <input
+                  type="color"
+                  value={chestIconColor}
+                  onChange={(e) => setChestIconColor(e.target.value)}
+                  style={{ width: 28, height: 22, border: 'none', cursor: 'pointer', background: 'none' }}
+                />
+              )}
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+              <label style={{ color: '#888', fontSize: 11, width: 44 }}>Size</label>
+              <input
+                type="range"
+                min={5}
+                max={60}
+                value={chestIconScale}
+                onChange={(e) => setChestIconScale(Number(e.target.value))}
+                style={{ flex: 1 }}
+              />
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+              <label style={{ color: '#888', fontSize: 11, width: 44 }}>X</label>
+              <input
+                type="range"
+                min={-1}
+                max={1}
+                step={0.05}
+                value={chestIconX}
+                onChange={(e) => setChestIconX(Number(e.target.value))}
+                style={{ flex: 1 }}
+              />
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+              <label style={{ color: '#888', fontSize: 11, width: 44 }}>Y</label>
+              <input
+                type="range"
+                min={-1}
+                max={1}
+                step={0.05}
+                value={chestIconY}
+                onChange={(e) => setChestIconY(Number(e.target.value))}
+                style={{ flex: 1 }}
+              />
+            </div>
+            <button
+              onClick={() => setChestIcon(null)}
+              style={{
+                padding: '4px 8px',
+                border: '1px solid #444',
+                borderRadius: 4,
+                background: 'transparent',
+                color: '#f55',
+                fontSize: 12,
+                cursor: 'pointer',
+              }}
+            >
+              Remove
+            </button>
+          </div>
+        )}
         <h2 style={{ color: '#fff', margin: '12px 0 8px', fontSize: 18 }}>Zone Config</h2>
         {ALL_ZONES.map((zone) => (
           <div key={zone} style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
@@ -197,6 +322,15 @@ export function JerseyEditorPage() {
           >
             Export UV Map
           </button>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 8 }}>
+            <input
+              type="checkbox"
+              id="bloom-toggle"
+              checked={bloomEnabled}
+              onChange={(e) => setBloomEnabled(e.target.checked)}
+            />
+            <label htmlFor="bloom-toggle" style={{ color: '#ccc', fontSize: 13, cursor: 'pointer' }}>Bloom</label>
+          </div>
         </div>
       </div>
 
@@ -211,6 +345,7 @@ export function JerseyEditorPage() {
           gl.toneMappingExposure = 1.1
         }}
       >
+        <SpaceBackground />
         <ambientLight intensity={0.85} />
         <directionalLight position={[2, 4, 2]} intensity={1.4} />
         <directionalLight position={[-2, 1, -1]} intensity={0.45} />
@@ -226,6 +361,16 @@ export function JerseyEditorPage() {
           minDistance={2}
           maxDistance={6}
         />
+        {bloomEnabled && (
+          <EffectComposer>
+            <Bloom
+              luminanceThreshold={0.3}
+              luminanceSmoothing={0.4}
+              intensity={0.6}
+              mipmapBlur
+            />
+          </EffectComposer>
+        )}
       </Canvas>
       </div>
     </div>
